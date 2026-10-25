@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deutsch Learning & Vocabulary Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Firebase SDK v11 (ES Module) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    window.initFirebase = function(config) {
+      try {
+        const app = initializeApp(config);
+        const db = getFirestore(app);
+        window.firebaseDB = db;
+        window.fbDoc = doc;
+        window.fbSetDoc = setDoc;
+        window.fbGetDoc = getDoc;
+        window.fbOnSnapshot = onSnapshot;
+
+        document.getElementById('dbBadge').className = "text-[11px] px-3 py-1 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5";
+        document.getElementById('dbBadgeText').innerText = "Firebase Connected";
+        console.log("Firebase initialized successfully!");
+        
+        syncDataFromFirebase();
+      } catch (e) {
+        console.error("Firebase init error:", e);
+      }
+    };
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0b0f19; color: #f8fafc; }
+    .nav-tab.active { background-color: #0284c7; color: #ffffff; font-weight: 600; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3); }
+    .drive-folder-card:hover { transform: translateY(-2px); transition: all 0.2s ease; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100 antialiased">
+
+  <!-- Header Section -->
+  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-xl shadow-lg shadow-sky-500/20">
+          🇩🇪
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg tracking-tight text-white">Deutsch Learning Hub</h1>
+          <p class="text-[11px] text-slate-400">Hệ thống kiến thức & Từ vựng tiếng Đức</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <span id="dbBadge" class="text-[11px] px-3 py-1 rounded-full font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span id="dbBadgeText">LocalStorage Mode</span>
+        </span>
+        <button onclick="openAuthModal()" id="authStatusBtn" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl flex items-center gap-2 transition font-medium">
+          <i class="fa-solid fa-lock text-amber-400" id="authIcon"></i>
+          <span id="authText">Chưa mở khóa</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="bg-slate-900/60 border-t border-slate-800/80 px-4 sm:px-6">
+      <div class="max-w-7xl mx-auto flex space-x-2 py-2 overflow-x-auto text-xs">
+        <button onclick="switchTab('skills')" id="tab-skills" class="nav-tab px-4 py-2.5 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-2 active">
+          <i class="fa-solid fa-book"></i> Kho Tài Liệu
+        </button>
+        <button onclick="switchTab('vocab')" id="tab-vocab" class="nav-tab px-4 py-2.5 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-2">
+          <i class="fa-solid fa-layer-group"></i> Dò Từ Vựng (Thema)
+        </button>
+        <button onclick="switchTab('admin')" id="tab-admin" class="nav-tab px-4 py-2.5 rounded-xl text-slate-400 hover:text-white transition flex items-center gap-2">
+          <i class="fa-solid fa-user-shield"></i> Admin Panel
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-grow w-full space-y-6">
+
+    <!-- TAB 1: KHO TÀI LIỆU -->
+    <section id="sec-skills" class="space-y-6">
+      <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-folder-open text-sky-400"></i> Kho Kiến Thức Tiếng Đức (A1 - B2)
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Quản lý Grammatik và Schreiben chia theo level. Bấm vào từng Folder để mở chi tiết.</p>
+        </div>
+      </div>
+
+      <div id="skillsContainer" class="space-y-6"></div>
+    </section>
+
+    <!-- TAB 2: DÒ TỪ VỰNG THEO THEMA -->
+    <section id="sec-vocab" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Sidebar Thema -->
+        <div class="lg:col-span-1 space-y-4">
+          <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4">
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-list text-purple-400"></i> Danh Sách Thema
+              </h3>
+              <button onclick="promptAddThema()" class="text-xs bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 px-2.5 py-1 rounded-lg font-medium border border-purple-500/20 transition">
+                + Thema
+              </button>
+            </div>
+            <div id="themaList" class="space-y-2 max-h-[320px] overflow-y-auto pr-1"></div>
+          </div>
+
+          <!-- Quizlet Import -->
+          <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-3">
+            <h4 class="font-bold text-xs text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-file-import text-sky-400"></i> Import Quizlet
+            </h4>
+            <p class="text-xs text-slate-400">Format: <code class="bg-slate-800 px-1 py-0.5 rounded text-sky-300">Từ_Đức [Tab / - / :] Nghĩa_Việt</code></p>
+            <textarea id="quizletInput" rows="4" placeholder="hallo	xin chào&#10;gut	tốt" class="w-full text-xs p-3 bg-slate-950 border border-slate-800 text-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none font-mono"></textarea>
+            <button onclick="importQuizlet()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-purple-900/40 transition">
+              Import Vào Thema
+            </button>
+          </div>
+        </div>
+
+        <!-- Practice & List Area -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <div class="flex items-center gap-3">
+                <h3 id="activeThemaTitle" class="text-base font-bold text-white">Chọn 1 Thema</h3>
+                <button id="editThemaBtn" onclick="promptEditThema()" class="text-xs text-slate-400 hover:text-white hidden"><i class="fa-solid fa-pen"></i></button>
+              </div>
+              <p id="activeThemaStat" class="text-xs text-slate-400 mt-0.5">Tổng từ: 0 | Thành thạo: 0%</p>
+            </div>
+            <div class="flex gap-2 w-full sm:w-auto">
+              <button onclick="setVocabView('practice')" id="btnViewPractice" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold transition">
+                <i class="fa-solid fa-graduation-cap mr-1"></i> Dò Từ
+              </button>
+              <button onclick="setVocabView('list')" id="btnViewList" class="flex-1 sm:flex-none px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold transition">
+                <i class="fa-solid fa-table-list mr-1"></i> Danh Sách
+              </button>
+            </div>
+          </div>
+
+          <!-- Practice Mode -->
+          <div id="vocabPracticeCard" class="bg-slate-900 p-8 rounded-2xl border border-slate-800 text-center space-y-6">
+            <div class="flex justify-between items-center text-xs text-slate-400 font-medium border-b border-slate-800 pb-3">
+              <span id="cardProgress">Từ đang luyện tập</span>
+              <span id="cardLevelBadge" class="bg-sky-500/10 text-sky-400 px-3 py-1 rounded-full border border-sky-500/20 font-bold">Level 1</span>
+            </div>
+            <div class="py-4 space-y-2">
+              <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Nghĩa Tiếng Việt</span>
+              <h2 id="cardVietnamese" class="text-2xl sm:text-3xl font-extrabold text-purple-400 tracking-tight">---</h2>
+            </div>
+            <div class="space-y-3 max-w-md mx-auto">
+              <input type="text" id="userInputDe" placeholder="Nhập từ tiếng Đức tương ứng..." 
+                     onkeydown="if(event.key === 'Enter') checkVocabularyInput()"
+                     class="w-full p-3.5 bg-slate-950 border border-slate-800 text-white rounded-xl text-center text-sm outline-none focus:ring-2 focus:ring-sky-500 font-semibold">
+              <button id="vocabActionBtn" onclick="checkVocabularyInput()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition">
+                Kiểm Tra
+              </button>
+              <div id="vocabFeedbackResult" class="text-xs font-semibold py-1 hidden"></div>
+            </div>
+          </div>
+
+          <!-- List Mode -->
+          <div id="vocabListTable" class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden hidden">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/50">
+              <span class="text-xs font-bold text-slate-300 uppercase">Danh Sách Từ Vựng</span>
+              <button onclick="promptAddWord()" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-medium hover:bg-emerald-500 transition">
+                + Thêm Từ
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th class="p-3">Từ Tiếng Đức</th>
+                    <th class="p-3">Nghĩa Tiếng Việt</th>
+                    <th class="p-3 text-center">Level</th>
+                    <th class="p-3 text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="wordTableBody" class="divide-y divide-slate-800/80"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: ADMIN PANEL -->
+    <section id="sec-admin" class="hidden max-w-xl mx-auto space-y-6">
+      <div id="adminLoginForm" class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+        <div class="text-center space-y-1">
+          <div class="w-12 h-12 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto text-xl">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Đăng Nhập Quản Trị</h3>
+        </div>
+        <form onsubmit="handleAdminAuth(event)" class="space-y-3">
+          <div>
+            <label class="text-xs font-medium text-slate-300">Mật khẩu Admin</label>
+            <input type="password" id="adminPassInput" class="w-full text-xs p-3 bg-slate-950 border border-slate-800 text-white rounded-xl focus:ring-2 focus:ring-amber-500 outline-none mt-1" placeholder="Nhập mật khẩu..." required>
+          </div>
+          <button type="submit" class="w-full py-2.5 bg-slate-100 hover:bg-white text-slate-950 rounded-xl text-xs font-bold transition">
+            Đăng Nhập
+          </button>
+        </form>
+      </div>
+
+      <div id="adminDashboard" class="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-5 hidden">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <h3 class="font-bold text-white text-sm">Bảng Quản Trị</h3>
+          <button onclick="adminLogout()" class="text-xs text-red-400 hover:text-red-300">Đăng xuất</button>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-xs text-slate-300 font-semibold">Khởi tạo dữ liệu mặc định (Seed Data)</label>
+          <button onclick="promptSeedData()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-database"></i> Seed Data Mặc Định
+          </button>
+        </div>
+
+        <div class="border-t border-slate-800 pt-4 space-y-2">
+          <label class="text-xs text-slate-300 font-semibold">Đổi mật khẩu hệ thống</label>
+          <input type="password" id="newPassInput" class="w-full text-xs p-2.5 bg-slate-950 border border-slate-800 text-white rounded-xl outline-none" placeholder="Mật khẩu mới...">
+          <button onclick="changePassword()" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-xl">
+            Lưu Mật Khẩu
+          </button>
+        </div>
+
+        <div class="border-t border-slate-800 pt-4 space-y-2">
+          <label class="text-xs text-slate-300 font-semibold">Cấu hình Firebase JSON Config</label>
+          <textarea id="firebaseConfigArea" rows="4" placeholder='{ "apiKey": "...", "projectId": "..." }' class="w-full text-xs p-2.5 bg-slate-950 border border-slate-800 text-white font-mono rounded-xl outline-none"></textarea>
+          <button onclick="saveFirebaseConfig()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl">
+            Kết Nối Firebase
+          </button>
+        </div>
+
+        <div class="border-t border-slate-800 pt-4 space-y-2">
+          <label class="text-xs text-slate-300 font-semibold">Sao lưu Dữ Liệu</label>
+          <div class="flex gap-2">
+            <button onclick="exportJSON()" class="flex-1 py-2 bg-slate-800 text-slate-200 text-xs rounded-xl hover:bg-slate-700">Export JSON</button>
+            <button onclick="document.getElementById('importFile').click()" class="flex-1 py-2 bg-slate-800 text-slate-200 text-xs rounded-xl hover:bg-slate-700">Import JSON</button>
+            <input type="file" id="importFile" onchange="importJSON(event)" class="hidden" accept=".json">
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOLDER DIALOG POPUP -->
+  <div id="folderDialog" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[1000] flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 w-full max-w-2xl rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-800 max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-base flex items-center gap-2" id="folderDialogTitle">
+          <i class="fa-solid fa-folder-open text-amber-400"></i> Folder Level A1
+        </h3>
+        <button onclick="closeFolderDialog()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div id="folderDialogBody" class="space-y-3 overflow-y-auto flex-grow pr-1"></div>
+
+      <div class="border-t border-slate-800 pt-3 flex justify-end">
+        <button onclick="closeFolderDialog()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SINGLE DOC DIALOG -->
+  <div id="singleDocDialog" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[1000] flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 w-full max-w-2xl rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-800 max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-base flex items-center gap-2" id="singleDocDialogTitle">
+          <i class="fa-solid fa-file-lines text-sky-400"></i> Chi tiết tài liệu
+        </h3>
+        <button onclick="closeSingleDocDialog()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div id="singleDocDialogBody" class="space-y-3 overflow-y-auto flex-grow pr-1"></div>
+
+      <div class="border-t border-slate-800 pt-3 flex justify-end">
+        <button onclick="closeSingleDocDialog()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRIVE VIEW DIALOG -->
+  <div id="driveViewDialog" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[999] flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 w-full max-w-4xl rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-800 max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="font-bold text-white text-base flex items-center gap-2" id="driveDialogTitle">
+            <i class="fa-brands fa-google-drive text-emerald-400"></i> Google Drive View
+          </h3>
+          <p class="text-xs text-slate-400">Xem thư mục và sắp xếp tài liệu linh hoạt theo tên A-Z</p>
+        </div>
+        <button onclick="closeDriveDialog()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Controls: Filter Level & Sort -->
+      <div class="flex flex-col sm:flex-row justify-between items-center bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs gap-3">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <span class="text-slate-400 font-medium">Lọc level:</span>
+          <select id="driveLevelFilter" onchange="renderDriveDialogContent()" class="bg-slate-900 text-white border border-slate-700 px-3 py-1.5 rounded-lg outline-none flex-1 sm:flex-none">
+            <option value="ALL">Tất cả Level</option>
+            <option value="A1">Level A1</option>
+            <option value="A2">Level A2</option>
+            <option value="B1">Level B1</option>
+            <option value="B2">Level B2</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+          <span class="text-slate-400 font-medium">Sắp xếp:</span>
+          <select id="driveSortSelect" onchange="renderDriveDialogContent()" class="bg-slate-900 text-white border border-slate-700 px-3 py-1.5 rounded-lg outline-none">
+            <option value="name-asc">Tên (A-Z)</option>
+            <option value="name-desc">Tên (Z-A)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="driveGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 overflow-y-auto flex-grow p-1"></div>
+
+      <div class="border-t border-slate-800 pt-3 flex justify-end">
+        <button onclick="closeDriveDialog()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTH MODAL -->
+  <div id="authModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[1001] flex items-center justify-center hidden">
+    <div class="bg-slate-900 w-full max-w-sm rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-800">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+          <i class="fa-solid fa-lock text-amber-400"></i> Mở Khóa Quyền Chỉnh Sửa
+        </h3>
+        <button onclick="closeAuthModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <input type="password" id="userPassInput" placeholder="Nhập mật khẩu..." class="w-full text-xs p-3 bg-slate-950 border border-slate-800 text-white rounded-xl outline-none focus:ring-2 focus:ring-amber-500">
+      <div id="authErrorMsg" class="text-xs text-red-400 hidden">Mật khẩu không chính xác!</div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeAuthModal()" class="px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-xl">Hủy</button>
+        <button onclick="verifyPassword()" class="px-4 py-2 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl">Mở Khóa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD DOC MODAL -->
+  <div id="addDocModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[1001] flex items-center justify-center hidden">
+    <div class="bg-slate-900 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 border border-slate-800">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-sm" id="modalDocSkillTitle">Thêm Tài Liệu</h3>
+        <button onclick="closeAddDocModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form onsubmit="saveDocItem(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="targetSkillKey">
+        <div>
+          <label class="font-semibold text-slate-300">Trình độ (Level)</label>
+          <select id="docLevelSelect" class="w-full p-2.5 bg-slate-950 border border-slate-800 text-white rounded-xl mt-1 outline-none">
+            <option value="A1">Level A1</option>
+            <option value="A2">Level A2</option>
+            <option value="B1">Level B1</option>
+            <option value="B2">Level B2</option>
+          </select>
+        </div>
+        <div>
+          <label class="font-semibold text-slate-300">Tiêu đề bài học / Tài liệu</label>
+          <input type="text" id="docTitleInput" required placeholder="Nhập tiêu đề..." class="w-full p-2.5 bg-slate-950 border border-slate-800 text-white rounded-xl mt-1 outline-none focus:ring-2 focus:ring-sky-500">
+        </div>
+        <div>
+          <label class="font-semibold text-slate-300">Nội dung bài viết / Mô tả ngữ pháp</label>
+          <textarea id="docTextInput" rows="4" placeholder="Nhập nội dung..." class="w-full p-2.5 bg-slate-950 border border-slate-800 text-slate-200 rounded-xl mt-1 outline-none font-mono"></textarea>
+        </div>
+        <div>
+          <label class="font-semibold text-slate-300">Link Ảnh (Tùy chọn)</label>
+          <input type="url" id="docImgUrlInput" placeholder="https://..." class="w-full p-2.5 bg-slate-950 border border-slate-800 text-white rounded-xl mt-1 outline-none">
+        </div>
+        <div class="flex justify-end gap-2 border-t border-slate-800 pt-3">
+          <button type="button" onclick="closeAddDocModal()" class="px-4 py-2 text-slate-300 hover:bg-slate-800 rounded-xl">Hủy</button>
+          <button type="submit" class="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-semibold">Lưu Tài Liệu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_PASS = "huy123123";
+
+    const defaultSkillsData = {
+      grammatik: {
+        title: "Grammatik (Ngữ pháp tiếng Đức)",
+        icon: "fa-book-bookmark",
+        levels: {
+          A1: [
+            { id: "g1", title: "Trật tự từ trong câu đơn (Wortstellung)", text: "Chủ ngữ luôn ở vị trí số 2 trong câu trần thuật. Động từ chia theo ngôi." },
+            { id: "g2", title: "Động từ khuyết thiếu (Modalverben)", text: "können, müssen, dürfen, wollen, sollen, mögen." }
+          ],
+          A2: [
+            { id: "g3", title: "Thì Perfekt", text: "Cấu trúc: haben / sein + Partizip II. Động từ chuyển động dùng sein." }
+          ],
+          B1: [
+            { id: "g4", title: "Mệnh đề quan hệ (Relativsätze)", text: "Đứng sau danh từ bổ nghĩa, động từ được chia ở cuối mệnh đề." }
+          ],
+          B2: [
+            { id: "g5", title: "Cấu trúc zu + Infinitiv", text: "um...zu (để mà), ohne...zu (mà không), statt...zu (thay vì)." }
+          ]
+        }
+      },
+      schreiben: {
+        title: "Schreiben (Kỹ năng Viết)",
+        icon: "fa-pen-nib",
+        levels: {
+          A1: [
+            { id: "s1", title: "Viết thiệp mời sinh nhật (Einladung)", text: "Hallo Anna, ich habe am Samstag Geburtstag..." }
+          ],
+          A2: [
+            { id: "s2", title: "Viết email xin nghỉ (Entschuldigung)", text: "Sehr geehrte Frau Müller, leider kann ich heute không đến được..." }
+          ],
+          B1: [
+            { id: "s3", title: "Thư phàn nàn (Beschwerdebrief)", text: "Sehr geehrte Damen und Herren, ich schreibe Ihnen weil..." }
+          ],
+          B2: [
+            { id: "s4", title: "Bài luận tranh luận (Meinungsäußerung)", text: "Zum Thema Homeoffice gibt es viele Ansichten..." }
+          ]
+        }
+      }
+    };
+
+    const emptySkillsData = {
+      grammatik: {
+        title: "Grammatik (Ngữ pháp tiếng Đức)",
+        icon: "fa-book-bookmark",
+        levels: { A1: [], A2: [], B1: [], B2: [] }
+      },
+      schreiben: {
+        title: "Schreiben (Kỹ năng Viết)",
+        icon: "fa-pen-nib",
+        levels: { A1: [], A2: [], B1: [], B2: [] }
+      }
+    };
+
+    let appState = {
+      password: localStorage.getItem('de_app_pass') || DEFAULT_PASS,
+      unlocked: localStorage.getItem('de_app_unlocked') === 'true',
+      skills: JSON.parse(localStorage.getItem('de_app_skills')) || emptySkillsData,
+      themas: JSON.parse(localStorage.getItem('de_app_themas')) || [],
+      activeThemaId: null,
+      vocabMode: 'practice',
+      currentWordId: null, // Lưu ID của từ đang đố hiện tại
+      activeDriveSkillKey: null
+    };
+
+    function saveState() {
+      const cleanSkills = JSON.parse(JSON.stringify(appState.skills));
+      const cleanThemas = JSON.parse(JSON.stringify(appState.themas));
+
+      localStorage.setItem('de_app_skills', JSON.stringify(cleanSkills));
+      localStorage.setItem('de_app_themas', JSON.stringify(cleanThemas));
+      localStorage.setItem('de_app_pass', appState.password);
+
+      if (window.firebaseDB) {
+        try {
+          const docRef = window.fbDoc(window.firebaseDB, "artifacts", "german_app", "public", "data");
+          window.fbSetDoc(docRef, { skills: cleanSkills, themas: cleanThemas, password: appState.password }, { merge: false });
+        } catch(e) { console.error("Firebase write error:", e); }
+      }
+    }
+
+    function syncDataFromFirebase() {
+      if (!window.firebaseDB) return;
+      const docRef = window.fbDoc(window.firebaseDB, "artifacts", "german_app", "public", "data");
+      
+      window.fbGetDoc(docRef).then(snapshot => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          
+          const isDefaultRemote = data.skills && JSON.stringify(data.skills) === JSON.stringify(defaultSkillsData);
+
+          if (!isDefaultRemote) {
+            if (data.skills !== undefined) appState.skills = data.skills;
+            if (data.themas !== undefined) {
+              appState.themas = data.themas;
+              if (appState.themas.length > 0 && !appState.themas.find(t => t.id === appState.activeThemaId)) {
+                appState.activeThemaId = appState.themas[0].id;
+              }
+            }
+            if (data.password !== undefined) appState.password = data.password;
+
+            localStorage.setItem('de_app_skills', JSON.stringify(appState.skills));
+            localStorage.setItem('de_app_themas', JSON.stringify(appState.themas));
+            localStorage.setItem('de_app_pass', appState.password);
+
+            renderSkillsComponent();
+            renderThemaList();
+            renderActiveThema();
+          } else {
+            saveState();
+          }
+        } else {
+          saveState();
+        }
+      }).catch(e => console.error(e));
+
+      window.fbOnSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const isDefaultRemote = data.skills && JSON.stringify(data.skills) === JSON.stringify(defaultSkillsData);
+
+          if (!isDefaultRemote) {
+            if (data.skills !== undefined) appState.skills = data.skills;
+            if (data.themas !== undefined) {
+              appState.themas = data.themas;
+              if (appState.themas.length > 0 && !appState.themas.find(t => t.id === appState.activeThemaId)) {
+                appState.activeThemaId = appState.themas[0].id;
+              }
+            }
+            if (data.password !== undefined) appState.password = data.password;
+
+            localStorage.setItem('de_app_skills', JSON.stringify(appState.skills));
+            localStorage.setItem('de_app_themas', JSON.stringify(appState.themas));
+            localStorage.setItem('de_app_pass', appState.password);
+
+            renderSkillsComponent();
+            renderThemaList();
+            renderActiveThema();
+            if (appState.activeDriveSkillKey) {
+              renderDriveDialogContent();
+            }
+          }
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateAuthUI();
+      renderSkillsComponent();
+      renderThemaList();
+      renderActiveThema();
+
+      const embeddedFirebaseConfig = {
+        apiKey: "AIzaSyDX-Gtyi6OZsSuSrTEfaW1pXojd0yf_GnE",
+        authDomain: "huydeutschlernen.firebaseapp.com",
+        projectId: "huydeutschlernen",
+        storageBucket: "huydeutschlernen.firebasestorage.app",
+        messagingSenderId: "635682703728",
+        appId: "1:635682703728:web:e9fe1d52f7ad806a9f27b5",
+        measurementId: "G-MPBQNWG5BV"
+      };
+
+      if (window.initFirebase) {
+        try {
+          window.initFirebase(embeddedFirebaseConfig);
+        } catch(e) {
+          console.error("Auto init firebase error:", e);
+        }
+      }
+    });
+
+    function switchTab(tab) {
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      document.getElementById('sec-skills').classList.add('hidden');
+      document.getElementById('sec-vocab').classList.add('hidden');
+      document.getElementById('sec-admin').classList.add('hidden');
+      document.getElementById(`sec-${tab}`).classList.remove('hidden');
+    }
+
+    function updateAuthUI() {
+      const btnText = document.getElementById('authText');
+      const icon = document.getElementById('authIcon');
+      if (appState.unlocked) {
+        btnText.innerText = 'Đã mở khóa';
+        icon.className = 'fa-solid fa-lock-open text-emerald-400';
+      } else {
+        btnText.innerText = 'Chưa mở khóa';
+        icon.className = 'fa-solid fa-lock text-amber-400';
+      }
+    }
+
+    function openAuthModal() { document.getElementById('authModal').classList.remove('hidden'); }
+    function closeAuthModal() { document.getElementById('authModal').classList.add('hidden'); }
+
+    function verifyPassword() {
+      const input = document.getElementById('userPassInput').value;
+      if (input === appState.password) {
+        appState.unlocked = true;
+        localStorage.setItem('de_app_unlocked', 'true');
+        updateAuthUI();
+        closeAuthModal();
+        renderSkillsComponent();
+        renderActiveThema();
+      } else {
+        document.getElementById('authErrorMsg').classList.remove('hidden');
+      }
+    }
+
+    function checkAuth() {
+      if (!appState.unlocked) {
+        openAuthModal();
+        return false;
+      }
+      return true;
+    }
+
+    // --- RENDER SKILLS COMPONENT ---
+    function renderSkillsComponent() {
+      const container = document.getElementById('skillsContainer');
+      container.innerHTML = '';
+
+      const orderedSkillKeys = ['schreiben', 'grammatik'];
+
+      orderedSkillKeys.forEach(skillKey => {
+        const skill = appState.skills[skillKey];
+        if (!skill) return;
+
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl';
+
+        let levelsHTML = '';
+        ['A1', 'A2', 'B1', 'B2'].forEach(lvl => {
+          const docs = skill.levels[lvl] || [];
+          levelsHTML += `
+            <div class="border-b border-slate-800/80 last:border-b-0">
+              <div onclick="openFolderDialog('${skillKey}', '${lvl}')" class="w-full px-5 py-4 bg-slate-900/40 hover:bg-slate-950 flex justify-between items-center text-left font-semibold text-xs text-slate-300 transition cursor-pointer">
+                <span class="flex items-center gap-2">
+                  <i class="fa-solid fa-folder text-amber-400 text-sm"></i>
+                  Folder Level ${lvl} <span class="text-slate-500 font-normal">(${docs.length} bài)</span>
+                </span>
+                <i class="fa-solid fa-chevron-right text-slate-600 text-[10px]"></i>
+              </div>
+            </div>
+          `;
+        });
+
+        card.innerHTML = `
+          <div class="p-4 sm:p-5 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
+            <h3 class="font-bold text-sm sm:text-base text-white flex items-center gap-2.5">
+              <i class="fa-solid ${skill.icon} text-sky-400"></i> ${skill.title}
+            </h3>
+            <div class="flex items-center gap-2">
+              <button onclick="openDriveDialog('${skillKey}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fa-brands fa-google-drive text-emerald-400"></i> Extend (Drive View)
+              </button>
+              <button onclick="openAddDocModalForSkill('${skillKey}')" class="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-md">
+                <i class="fa-solid fa-plus"></i> Thêm Tài Liệu
+              </button>
+            </div>
+          </div>
+          <div class="divide-y divide-slate-800">${levelsHTML}</div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // --- FOLDER DIALOG POPUP ---
+    function openFolderDialog(skillKey, level) {
+      const skill = appState.skills[skillKey];
+      const docs = skill.levels[level] || [];
+      document.getElementById('folderDialogTitle').innerHTML = `<i class="fa-solid fa-folder-open text-amber-400"></i> Folder Level ${level} - ${skill.title}`;
+
+      const body = document.getElementById('folderDialogBody');
+      body.innerHTML = '';
+
+      if (docs.length === 0) {
+        body.innerHTML = `<div class="text-xs text-slate-500 py-6 text-center">Chưa có bài viết hoặc tài liệu trong Folder này.</div>`;
+      } else {
+        docs.forEach((doc, idx) => {
+          const div = document.createElement('div');
+          div.className = 'bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs';
+          div.innerHTML = `
+            <div class="flex justify-between items-start">
+              <h5 class="font-bold text-white text-sm">${doc.title}</h5>
+              ${appState.unlocked ? `
+                <button onclick="deleteDocItem('${skillKey}', '${level}', ${idx})" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
+              ` : ''}
+            </div>
+            ${doc.text ? `<p class="text-slate-300 font-mono whitespace-pre-wrap bg-slate-900 p-3 rounded-lg border border-slate-800 text-xs leading-relaxed">${doc.text}</p>` : ''}
+            ${doc.imgUrl ? `<img src="${doc.imgUrl}" class="w-full max-h-56 object-cover rounded-lg border border-slate-800 mt-2">` : ''}
+          `;
+          body.appendChild(div);
+        });
+      }
+
+      document.getElementById('folderDialog').classList.remove('hidden');
+    }
+
+    function closeFolderDialog() {
+      document.getElementById('folderDialog').classList.add('hidden');
+    }
+
+    // --- SINGLE DOC DIALOG ---
+    function openSingleDocDialog(skillKey, level, docId) {
+      const skill = appState.skills[skillKey];
+      const docs = skill.levels[level] || [];
+      const doc = docs.find(d => d.id === docId);
+      if (!doc) return;
+
+      document.getElementById('singleDocDialogTitle').innerHTML = `<i class="fa-solid fa-file-lines text-sky-400"></i> ${doc.title} <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-bold ml-2">${level}</span>`;
+
+      const body = document.getElementById('singleDocDialogBody');
+      body.innerHTML = `
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 text-xs">
+          <h5 class="font-bold text-white text-sm">${doc.title}</h5>
+          ${doc.text ? `<p class="text-slate-300 font-mono whitespace-pre-wrap bg-slate-900 p-3 rounded-lg border border-slate-800 text-xs leading-relaxed">${doc.text}</p>` : ''}
+          ${doc.imgUrl ? `<img src="${doc.imgUrl}" class="w-full max-h-56 object-cover rounded-lg border border-slate-800 mt-2">` : ''}
+        </div>
+      `;
+
+      document.getElementById('singleDocDialog').classList.remove('hidden');
+    }
+
+    function closeSingleDocDialog() {
+      document.getElementById('singleDocDialog').classList.add('hidden');
+    }
+
+    // --- DRIVE VIEW DIALOG ---
+    function openDriveDialog(skillKey) {
+      appState.activeDriveSkillKey = skillKey;
+      const skill = appState.skills[skillKey];
+      document.getElementById('driveDialogTitle').innerHTML = `<i class="fa-brands fa-google-drive text-emerald-400"></i> Drive View - ${skill.title}`;
+      document.getElementById('driveLevelFilter').value = 'ALL';
+      document.getElementById('driveSortSelect').value = 'name-asc';
+      renderDriveDialogContent();
+      document.getElementById('driveViewDialog').classList.remove('hidden');
+    }
+
+    function closeDriveDialog() {
+      document.getElementById('driveViewDialog').classList.add('hidden');
+    }
+
+    function renderDriveDialogContent() {
+      const skillKey = appState.activeDriveSkillKey;
+      if (!skillKey || !appState.skills[skillKey]) return;
+
+      const skill = appState.skills[skillKey];
+      const sortMode = document.getElementById('driveSortSelect').value;
+      const filterLevel = document.getElementById('driveLevelFilter') ? document.getElementById('driveLevelFilter').value : 'ALL';
+
+      let allDocs = [];
+      ['A1', 'A2', 'B1', 'B2'].forEach(lvl => {
+        if (filterLevel === 'ALL' || filterLevel === lvl) {
+          (skill.levels[lvl] || []).forEach(d => {
+            allDocs.push({ ...d, level: lvl });
+          });
+        }
+      });
+
+      allDocs.sort((a, b) => {
+        if (sortMode === 'name-asc') return a.title.localeCompare(b.title);
+        return b.title.localeCompare(a.title);
+      });
+
+      const container = document.getElementById('driveGridContainer');
+      container.innerHTML = '';
+
+      if (allDocs.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-xs text-slate-500 text-center py-8">Chưa có tài liệu nào để hiển thị phù hợp.</div>`;
+        return;
+      }
+
+      allDocs.forEach(doc => {
+        const item = document.createElement('div');
+        item.className = 'drive-folder-card bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-sky-500/50 cursor-pointer flex flex-col justify-between space-y-3';
+        item.onclick = () => openSingleDocDialog(skillKey, doc.level, doc.id);
+
+        item.innerHTML = `
+          <div class="space-y-2">
+            <div class="flex justify-between items-center text-xs">
+              <i class="fa-solid fa-file-lines text-sky-400 text-base"></i>
+              <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-bold">${doc.level}</span>
+            </div>
+            <h5 class="font-bold text-white text-xs line-clamp-2">${doc.title}</h5>
+          </div>
+          <p class="text-[11px] text-slate-500 line-clamp-2 font-mono">${doc.text || 'Tài liệu'}</p>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function openAddDocModalForSkill(skillKey) {
+      if (!checkAuth()) return;
+      document.getElementById('targetSkillKey').value = skillKey;
+      document.getElementById('modalDocSkillTitle').innerText = `Thêm Tài Liệu vào ${appState.skills[skillKey].title}`;
+      document.getElementById('addDocModal').classList.remove('hidden');
+    }
+
+    function closeAddDocModal() { document.getElementById('addDocModal').classList.add('hidden'); }
+
+    function saveDocItem(e) {
+      e.preventDefault();
+      const skillKey = document.getElementById('targetSkillKey').value;
+      const level = document.getElementById('docLevelSelect').value;
+      const title = document.getElementById('docTitleInput').value;
+      const text = document.getElementById('docTextInput').value;
+      const imgUrl = document.getElementById('docImgUrlInput').value;
+
+      if (!appState.skills[skillKey].levels[level]) {
+        appState.skills[skillKey].levels[level] = [];
+      }
+
+      appState.skills[skillKey].levels[level].push({ id: 'doc-' + Date.now(), title, text, imgUrl });
+      saveState();
+      renderSkillsComponent();
+      closeAddDocModal();
+      document.getElementById('docTitleInput').value = '';
+      document.getElementById('docTextInput').value = '';
+      document.getElementById('docImgUrlInput').value = '';
+    }
+
+    function deleteDocItem(skillKey, level, idx) {
+      if (!checkAuth()) return;
+      if (confirm('Xóa tài liệu này?')) {
+        appState.skills[skillKey].levels[level].splice(idx, 1);
+        saveState();
+        renderSkillsComponent();
+        closeFolderDialog();
+      }
+    }
+
+    // --- VOCABULARY LOGIC ---
+    function renderThemaList() {
+      const container = document.getElementById('themaList');
+      container.innerHTML = '';
+      if (!appState.themas || appState.themas.length === 0) {
+        container.innerHTML = '<div class="text-xs text-slate-500 text-center py-2">Chưa có Thema nào</div>';
+        return;
+      }
+      appState.themas.forEach(th => {
+        const isSel = th.id === appState.activeThemaId;
+        const div = document.createElement('div');
+        div.className = `p-3 rounded-xl border text-xs cursor-pointer flex justify-between items-center transition ${
+          isSel ? 'bg-purple-950/40 border-purple-500/40 text-white font-bold' : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800 text-slate-300'
+        }`;
+        div.onclick = () => {
+          appState.activeThemaId = th.id;
+          renderThemaList();
+          renderActiveThema();
+        };
+        div.innerHTML = `<span>${th.name}</span><span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">${th.words ? th.words.length : 0} từ</span>`;
+        container.appendChild(div);
+      });
+    }
+
+    function renderActiveThema() {
+      const th = appState.themas.find(t => t.id === appState.activeThemaId);
+      if (!th) {
+        document.getElementById('activeThemaTitle').innerText = 'Chọn 1 Thema';
+        document.getElementById('editThemaBtn').classList.add('hidden');
+        document.getElementById('activeThemaStat').innerText = 'Tổng từ: 0 | Thành thạo: 0%';
+        if (appState.vocabMode === 'practice') renderCard();
+        else renderWordTable();
+        return;
+      }
+      document.getElementById('activeThemaTitle').innerText = th.name;
+      document.getElementById('editThemaBtn').classList.remove('hidden');
+
+      const total = th.words ? th.words.length : 0;
+      const avg = total ? (th.words.reduce((a,w)=>a+w.level,0)/(total*4)*100).toFixed(0) : 0;
+      document.getElementById('activeThemaStat').innerText = `Tổng từ: ${total} | Thành thạo: ${avg}%`;
+
+      if (appState.vocabMode === 'practice') renderCard();
+      else renderWordTable();
+    }
+
+    function promptAddThema() {
+      if (!checkAuth()) return;
+      const name = prompt('Tên Thema mới:');
+      if (name) {
+        const th = { id: 'th-' + Date.now(), name, words: [] };
+        appState.themas.push(th);
+        appState.activeThemaId = th.id;
+        saveState();
+        renderThemaList();
+        renderActiveThema();
+      }
+    }
+
+    function promptEditThema() {
+      if (!checkAuth()) return;
+      const th = appState.themas.find(t => t.id === appState.activeThemaId);
+      if (!th) return;
+      const act = prompt('Gõ "sua" để đổi tên, "xoa" để xóa Thema:');
+      if (act === 'sua') {
+        const n = prompt('Tên mới:', th.name);
+        if (n) th.name = n;
+      } else if (act === 'xoa') {
+        if (confirm('Xóa Thema này?')) {
+          appState.themas = appState.themas.filter(t => t.id !== th.id);
+          appState.activeThemaId = appState.themas[0]?.id || null;
+        }
+      }
+      saveState();
+      renderThemaList();
+      renderActiveThema();
+    }
+
+    function importQuizlet() {
+      if (!checkAuth()) return;
+      const th = appState.themas.find(t => t.id === appState.activeThemaId);
+      const val = document.getElementById('quizletInput').value.trim();
+      if (!val || !th) return;
+
+      if (!th.words) th.words = [];
+
+      val.split('\n').forEach(line => {
+        let p = line.split('\t');
+        if (p.length < 2) p = line.split(' - ');
+        if (p.length < 2) p = line.split(':');
+        if (p.length >= 2) th.words.push({ id: 'w-' + Math.random(), de: p[0].trim(), vi: p[1].trim(), level: 1 });
+      });
+      document.getElementById('quizletInput').value = '';
+      saveState();
+      renderActiveThema();
+      alert('Import từ thành công!');
+    }
+
+    function setVocabView(mode) {
+      appState.vocabMode = mode;
+      document.getElementById('btnViewPractice').className = mode === 'practice' ? 'flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold' : 'flex-1 sm:flex-none px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold';
+      document.getElementById('btnViewList').className = mode === 'list' ? 'flex-1 sm:flex-none px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold' : 'flex-1 sm:flex-none px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-bold';
+      document.getElementById('vocabPracticeCard').classList.toggle('hidden', mode !== 'practice');
+      document.getElementById('vocabListTable').classList.toggle('hidden', mode !== 'list');
+      renderActiveThema();
+    }
+
+   function renderCard() {
+      const th = appState.themas.find(t => t.id === appState.activeThemaId);
+      if (!th || !th.words || th.words.length === 0) {
+        document.getElementById('cardVietnamese').innerText = 'Chưa có từ vựng';
+        document.getElementById('userInputDe').style.display = 'none';
+        appState.currentWordId = null;
+        return;
+      }
+      document.getElementById('userInputDe').style.display = 'block';
+
+      let minLevel = Math.min(...th.words.map(w => w.level));
+      let lowestLevelWords = th.words.filter(w => w.level === minLevel);
+      let randomWord = lowestLevelWords[Math.floor(Math.random() * lowestLevelWords.length)];
+      appState.currentWordId = randomWord.id;
+
+      document.getElementById('cardVietnamese').innerText = randomWord.vi;
+      const inputEl = document.getElementById('userInputDe');
+      inputEl.value = '';
+      inputEl.disabled = false;
+      inputEl.focus();
+
+      const feedbackDiv = document.getElementById('vocabFeedbackResult');
+      feedbackDiv.classList.add('hidden');
+
+      const actionBtn = document.getElementById('vocabActionBtn');
+      actionBtn.innerText = 'Kiểm Tra';
+      // Gán lại sự kiện click cho nút Kiểm Tra
+      actionBtn.onclick = checkVocabularyInput;
+      actionBtn.className = 'w-full py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition';
+
+      document.getElementById('cardProgress').innerText = `Luyện tập từ level thấp nhất`;
+      document.getElementById('cardLevelBadge').innerText = `Level ${randomWord.level}`;
+    }
+
+  function checkVocabularyInput() {
+      const th = appState.themas.find(t => t.id === appState.activeThemaId);
+      if (!th || !th.words || !appState.currentWordId) return;
+
+      const w = th.words.find(word => word.id === appState.currentWordId);
+      if (!w) return;
+
+      const userVal = document.getElementById('userInputDe').value.trim();
+      const feedbackDiv = document.getElementById('vocabFeedbackResult');
+
+      if (!userVal) return;
+
+      const isCorrect = userVal.toLowerCase() === w.de.toLowerCase();
+      w.level = isCorrect ? Math.min(4, w.level + 1) : Math.max(1, w.level - 1);
+      saveState();
+
+      feedbackDiv.classList.remove('hidden');
+      if (isCorrect) {
+        feedbackDiv.className = "text-xs font-semibold py-1 text-emerald-400";
+        feedbackDiv.innerHTML = `<i class="fa-solid fa-check mr-1"></i> Chính xác! Tuyệt vời (+1 Level)`;
+      } else {
+        feedbackDiv.className = "text-xs font-semibold py-1 text-red-400";
+        feedbackDiv.innerHTML = `<i class="fa-solid fa-xmark mr-1"></i> Sai! Đáp án đúng: <strong class="text-white">${w.de}</strong> (-1 Level)`;
+      }
+
+      // Khóa ô input lại để người dùng không gõ tiếp được
+      document.getElementById('userInputDe').disabled = true;
+
+      // Đổi nút thành "Tiếp Theo" và BẮT BUỘC người dùng phải bấm vào nút này mới sang từ mới
+      const actionBtn = document.getElementById('vocabActionBtn');
+      actionBtn.innerText = 'Tiếp Theo ➔';
+      actionBtn.onclick = renderCard; 
+      actionBtn.className = 'w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition';
+    }
+
+    function renderWordTable() {
+      const th = appState.themas.find(t => t.id === appState.activeThemaId);
+      const tbody = document.getElementById('wordTableBody');
+      tbody.innerHTML = '';
+      if (!th || !th.words) return;
+
+      th.words.forEach((w, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-950/50 border-b border-slate-800/80';
+        tr.innerHTML = `
+          <td class="p-3 font-semibold text-white">${w.de}</td>
+          <td class="p-3 text-slate-300">${w.vi}</td>
+          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">Level ${w.level}</span></td>
+          <td class="p-3 text-right">
+            ${appState.unlocked ? `<button onclick="deleteWord(${idx})" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>` : ''}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function promptAddWord() {
+      if (!checkAuth()) return;
+      const th = appState.themas.find(t => t.id === appState.activeThemaId);
+      if (!th) return;
+      if (!th.words) th.words = [];
+      const de = prompt('Từ tiếng Đức:');
+      const vi = prompt('Nghĩa tiếng Việt:');
+      if (de && vi) {
+        th.words.push({ id: 'w-' + Date.now(), de, vi, level: 1 });
+        saveState();
+        renderActiveThema();
+      }
+    }
+
+    function deleteWord(idx) {
+      if (!checkAuth()) return;
+      const th = appState.themas.find(t => t.id === appState.activeThemaId);
+      if (!th || !th.words) return;
+      th.words.splice(idx, 1);
+      saveState();
+      renderActiveThema();
+    }
+
+    // --- ADMIN LOGIC ---
+    function handleAdminAuth(e) {
+      e.preventDefault();
+      const val = document.getElementById('adminPassInput').value;
+      if (val === appState.password) {
+        document.getElementById('adminLoginForm').classList.add('hidden');
+        document.getElementById('adminDashboard').classList.remove('hidden');
+      } else alert('Mật khẩu sai!');
+    }
+
+    function adminLogout() {
+      document.getElementById('adminLoginForm').classList.remove('hidden');
+      document.getElementById('adminDashboard').classList.add('hidden');
+    }
+
+    function changePassword() {
+      const p = document.getElementById('newPassInput').value;
+      if (!p) return;
+      appState.password = p;
+      saveState();
+      alert('Đổi mật khẩu thành công!');
+    }
+
+    function promptSeedData() {
+      if (!checkAuth()) return;
+      if (confirm("Bạn có chắc chắn muốn khởi tạo lại dữ liệu mặc định (Seed Data) không? Thao tác này sẽ ghi đè dữ liệu hiện tại.")) {
+        appState.skills = JSON.parse(JSON.stringify(defaultSkillsData));
+        appState.themas = [
+          {
+            id: 'th-1',
+            name: 'Alltag & Leben',
+            words: [
+              { id: 'w-1', de: 'die Wohnung', vi: 'căn hộ', level: 1 },
+              { id: 'w-2', de: 'der Mietvertrag', vi: 'hợp đồng thuê nhà', level: 2 }
+            ]
+          }
+        ];
+        appState.activeThemaId = 'th-1';
+        saveState();
+        renderSkillsComponent();
+        renderThemaList();
+        renderActiveThema();
+        alert("Seed dữ liệu mặc định thành công!");
+      }
+    }
+
+    function saveFirebaseConfig() {
+      const txt = document.getElementById('firebaseConfigArea').value.trim();
+      if (!txt) return;
+      try {
+        const config = JSON.parse(txt);
+        localStorage.setItem('de_fb_config', JSON.stringify(config));
+        if (window.initFirebase) window.initFirebase(config);
+        alert('Đã lưu và kết nối Firebase!');
+      } catch(e) { alert('JSON không hợp lệ!'); }
+    }
+
+    function exportJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+      const a = document.createElement('a'); a.href = dataStr; a.download = "deutsch_hub.json"; a.click();
+    }
+
+    function importJSON(e) {
+      const r = new FileReader();
+      r.onload = function(evt) {
+        appState = JSON.parse(evt.target.result);
+        saveState();
+        location.reload();
+      };
+      r.readAsText(e.target.files[0]);
+    }
+  </script>
+</body>
+</html>
